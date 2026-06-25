@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand palette */
+  --color-navy: #1a1a2e;
+  --color-navy-700: #232342;
+  --color-navy-600: #2c2c52;
+  --color-navy-500: #3a3a63;
+  --color-amber: #f4a261;
+  --color-amber-dark: #e08a45;
+  --color-amber-soft: #fdf1e5;
+  --color-teal: #2a9d8f;
+  --color-teal-dark: #218072;
+  --color-teal-soft: #e6f4f2;
+
+  --color-ink: #1a1a2e;
+  --color-muted: #6b6b80;
+  --color-line: #e6e6ee;
+  --color-surface: #ffffff;
+  --color-canvas: #f6f6fb;
+
+  --color-danger: #e63946;
+  --color-danger-soft: #fdeaec;
+  --color-warn: #f4a261;
+  --color-ok: #2a9d8f;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  --radius-card: 14px;
+}
+
+:root {
+  color-scheme: light;
+  --shadow-soft: 0 1px 2px rgba(26, 26, 46, 0.04), 0 8px 24px -8px rgba(26, 26, 46, 0.08);
+  --shadow-soft-lg: 0 4px 8px rgba(26, 26, 46, 0.05), 0 20px 40px -16px rgba(26, 26, 46, 0.14);
+}
+
+html,
+body {
+  color: var(--color-ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  /* A faint, fixed wash of the brand teal/amber behind every page — the
+     "dreamy" atmosphere stays consistent regardless of scroll position. */
+  background-color: var(--color-canvas);
+  background-image:
+    radial-gradient(60rem 32rem at 8% -10%, rgba(42, 157, 143, 0.07), transparent 60%),
+    radial-gradient(50rem 28rem at 100% 0%, rgba(244, 162, 97, 0.08), transparent 55%);
+  background-attachment: fixed;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c9c9da;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b0b0c6;
+}
+
+@layer components {
+  .btn,
+  .btn-amber,
+  .btn-teal,
+  .btn-navy,
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold;
+    transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease,
+      transform 100ms ease;
+  }
+  .btn:disabled,
+  .btn-amber:disabled,
+  .btn-teal:disabled,
+  .btn-navy:disabled,
+  .btn-ghost:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+  .btn:not(:disabled):active,
+  .btn-amber:not(:disabled):active,
+  .btn-teal:not(:disabled):active,
+  .btn-navy:not(:disabled):active,
+  .btn-ghost:not(:disabled):active {
+    transform: scale(0.98);
+  }
+  .btn-amber {
+    @apply bg-amber text-navy hover:bg-amber-dark;
+    box-shadow: 0 1px 2px rgba(224, 138, 69, 0.15), 0 8px 20px -8px rgba(224, 138, 69, 0.45);
+  }
+  .btn-teal {
+    @apply bg-teal text-white hover:bg-teal-dark;
+    box-shadow: 0 1px 2px rgba(33, 128, 114, 0.15), 0 8px 20px -8px rgba(33, 128, 114, 0.45);
+  }
+  .btn-navy {
+    @apply bg-navy text-white hover:bg-navy-600;
+    box-shadow: 0 1px 2px rgba(26, 26, 46, 0.15), 0 8px 20px -8px rgba(26, 26, 46, 0.45);
+  }
+  .btn-ghost {
+    @apply border border-line bg-white text-ink hover:border-line hover:bg-canvas;
+  }
+  .card {
+    @apply rounded-[var(--radius-card)] border border-line bg-surface;
+    box-shadow: var(--shadow-soft);
+  }
+  /* Opt-in lift for cards that are themselves a link/button — not every
+     .card is interactive (dialogs, static summaries), so the hover affordance
+     is a separate class rather than baked into .card. */
+  .card-hover {
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in oklab, var(--color-teal) 35%, var(--color-line));
+    box-shadow: var(--shadow-soft-lg);
+  }
+  .input {
+    @apply w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-teal focus:ring-2 focus:ring-teal/20;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-ink;
+  }
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+}
+
+@keyframes flashCell {
+  0% {
+    box-shadow: 0 0 0 0 rgba(244, 162, 97, 0);
+    filter: brightness(1);
+  }
+  30% {
+    box-shadow: 0 0 0 4px rgba(244, 162, 97, 0.55);
+    filter: brightness(1.12);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 162, 97, 0);
+    filter: brightness(1);
+  }
+}
+.flash {
+  animation: flashCell 0.7s ease-out;
+}
