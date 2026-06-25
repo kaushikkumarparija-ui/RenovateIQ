@@ -5,7 +5,11 @@
 // Set GEMINI_API_KEY (free key from https://aistudio.google.com/apikey).
 // GEMINI_MODEL is optional; defaults to a free flash model.
 
-const DEFAULT_MODEL = "gemini-2.0-flash";
+const DEFAULT_MODEL = "gemini-3.5-flash";
+// Each Gemini model has its own independent daily quota on the free tier —
+// when the primary model's quota is exhausted, this sibling model (same
+// generation, same generateContent API shape) usually still has headroom.
+const FALLBACK_MODEL = "gemini-2.5-flash";
 
 function endpoint(model: string): string {
   return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
@@ -22,6 +26,11 @@ interface GeminiOpts {
 
 export function geminiModel(): string {
   return process.env.GEMINI_MODEL || DEFAULT_MODEL;
+}
+
+function modelChain(): string[] {
+  const primary = geminiModel();
+  return primary === FALLBACK_MODEL ? [primary] : [primary, FALLBACK_MODEL];
 }
 
 // Logs the technical detail server-side, but throws a message that's safe to
@@ -50,33 +59,42 @@ export async function geminiGenerate({
     generationConfig,
   });
 
-  // The free tier returns 429/503 ("high demand") often enough in practice
-  // that a single attempt regularly fails for reasons that have nothing to
-  // do with the request — a couple of quick retries clear most of them
-  // before the user ever sees an error.
-  const MAX_ATTEMPTS = 3;
+  // The free tier returns 429/503 ("high demand", or a model's own daily
+  // quota exhausted) often enough in practice that a single attempt against
+  // a single model regularly fails for reasons that have nothing to do with
+  // the request. Retry each model a couple of times, then fall through to
+  // the next model in the chain before giving up.
+  const ATTEMPTS_PER_MODEL = 2;
+  const chain = modelChain();
   let res: Response | undefined;
   let body = "";
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    res = await fetch(`${endpoint(geminiModel())}?key=${encodeURIComponent(key)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: payload,
-    });
-    if (res.ok) break;
-    body = await res.text();
-    const retryable = res.status === 429 || res.status >= 500;
-    if (!retryable || attempt === MAX_ATTEMPTS) break;
-    console.warn(
-      `Gemini attempt ${attempt}/${MAX_ATTEMPTS} got HTTP ${res.status}, retrying…`,
-    );
-    await new Promise((r) => setTimeout(r, attempt * 800));
+  let triedModel = chain[0];
+
+  outer: for (const model of chain) {
+    triedModel = model;
+    for (let attempt = 1; attempt <= ATTEMPTS_PER_MODEL; attempt++) {
+      res = await fetch(`${endpoint(model)}?key=${encodeURIComponent(key)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      });
+      if (res.ok) break outer;
+      body = await res.text();
+      const retryable = res.status === 429 || res.status >= 500;
+      if (!retryable) break; // this model won't recover — try the next one
+      if (attempt < ATTEMPTS_PER_MODEL) {
+        console.warn(`Gemini ${model} attempt ${attempt}/${ATTEMPTS_PER_MODEL} got HTTP ${res.status}, retrying…`);
+        await new Promise((r) => setTimeout(r, attempt * 800));
+      } else {
+        console.warn(`Gemini ${model} exhausted after ${ATTEMPTS_PER_MODEL} attempts (HTTP ${res.status}).`);
+      }
+    }
   }
 
   if (!res!.ok) {
     const retryable = res!.status === 429 || res!.status >= 500;
     failGemini(
-      `HTTP ${res!.status}: ${body.slice(0, 500)}`,
+      `HTTP ${res!.status} on ${triedModel}: ${body.slice(0, 500)}`,
       retryable
         ? "Our AI planner is getting heavy traffic right now. Please try again in a moment."
         : "The AI planner couldn't process this request. Please try again.",
