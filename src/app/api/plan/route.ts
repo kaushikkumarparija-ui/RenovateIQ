@@ -89,7 +89,7 @@ export async function POST(req: Request) {
       system: PLAN_SYSTEM_PROMPT,
       user: `${buildPlanUserMessage(p)}\n\n${PLAN_JSON_SHAPE}`,
       json: true,
-      maxOutputTokens: 8192,
+      maxOutputTokens: 16384,
       temperature: 0.4,
     });
 
