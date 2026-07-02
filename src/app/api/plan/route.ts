@@ -9,7 +9,7 @@ import {
   filterHiddenConditions,
 } from "@/lib/plan-prompt";
 import { sanitizeTasks, computeBudget } from "@/lib/plan-compute";
-import { geminiGenerate, parseGeminiJson } from "@/lib/gemini";
+import { llmGenerate, parseLlmJson, llmConfigured } from "@/lib/llm";
 import type { ProjectRow, RenovationPlan, PlanBudget } from "@/lib/types";
 
 // Plan generation can take a while; keep headroom for the model round-trip.
@@ -20,7 +20,7 @@ function num(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-// Gemini's JSON mode should return real booleans, but coerce defensively —
+// The model's JSON mode should return real booleans, but coerce defensively —
 // a stray string "false" must not silently invert this safety check.
 function bool(v: unknown): boolean {
   if (typeof v === "string") return v.trim().toLowerCase() === "true";
@@ -57,9 +57,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
   }
 
-  if (!process.env.GEMINI_API_KEY) {
+  if (!llmConfigured()) {
     return NextResponse.json(
-      { error: "GEMINI_API_KEY is not configured on the server." },
+      { error: "No LLM provider is configured on the server. Set GROQ_API_KEY and/or OPENROUTER_API_KEY." },
       { status: 500 },
     );
   }
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
 
   let plan: RenovationPlan;
   try {
-    const raw = await geminiGenerate({
+    const raw = await llmGenerate({
       system: PLAN_SYSTEM_PROMPT,
       user: `${buildPlanUserMessage(p)}\n\n${PLAN_JSON_SHAPE}`,
       json: true,
@@ -93,7 +93,7 @@ export async function POST(req: Request) {
       temperature: 0.4,
     });
 
-    const parsed = parseGeminiJson<RenovationPlan>(raw);
+    const parsed = parseLlmJson<RenovationPlan>(raw);
 
     parsed.project_summary = parsed.project_summary || "";
     parsed.tasks = sanitizeTasks(parsed.tasks || []);

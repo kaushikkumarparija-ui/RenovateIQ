@@ -70,7 +70,10 @@ export default function ContractorLanding() {
         </div>
       </section>
 
-      <section className="mx-auto -mt-12 grid w-full max-w-6xl gap-5 px-6 md:grid-cols-3 md:px-12">
+      {/* Cards sit cleanly below the hero (matches the homeowner landing at
+          src/app/page.tsx). Previously used a negative margin that pulled the
+          cards up into the hero and clipped their tops. */}
+      <section className="mx-auto mt-14 grid w-full max-w-6xl gap-5 px-6 md:grid-cols-3 md:px-12">
         {TRUST.map((t) => (
           <div key={t.title} className="card p-6 shadow-sm">
             <div className="mb-3 text-3xl">{t.icon}</div>

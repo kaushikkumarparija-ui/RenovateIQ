@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ProjectRow, RenovationPlan } from "@/lib/types";
 import { formatINR } from "@/lib/format";
-import { geminiGenerate } from "@/lib/gemini";
+import { llmGenerate, llmConfigured } from "@/lib/llm";
 
 export const maxDuration = 60;
 
@@ -25,9 +25,9 @@ export async function POST(req: Request) {
   if (!projectId || !question?.trim()) {
     return NextResponse.json({ error: "Missing projectId or question" }, { status: 400 });
   }
-  if (!process.env.GEMINI_API_KEY) {
+  if (!llmConfigured()) {
     return NextResponse.json(
-      { error: "GEMINI_API_KEY is not configured on the server." },
+      { error: "No LLM provider is configured on the server. Set GROQ_API_KEY and/or OPENROUTER_API_KEY." },
       { status: 500 },
     );
   }
@@ -70,7 +70,7 @@ ${taskLines}
 Homeowner's what-if question: ${question.trim()}`;
 
   try {
-    const answer = await geminiGenerate({
+    const answer = await llmGenerate({
       system: SYSTEM,
       user: context,
       maxOutputTokens: 600,

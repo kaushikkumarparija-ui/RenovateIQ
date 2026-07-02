@@ -1,5 +1,5 @@
 // Standalone smoke test: replicates the exact plan-generation call from
-// src/app/api/plan/route.ts (Google Gemini, free tier), then runs the full
+// src/app/api/plan/route.ts (OpenRouter → Groq, free tiers), then runs the full
 // sanitize -> schedule -> budget pipeline on the result.
 // Run:  node scripts/smoke-plan.ts
 import {
@@ -9,7 +9,7 @@ import {
   assessBudgetTight,
 } from "../src/lib/plan-prompt.ts";
 import { sanitizeTasks, schedule, computeBudget } from "../src/lib/plan-compute.ts";
-import { geminiGenerate, parseGeminiJson, geminiModel } from "../src/lib/gemini.ts";
+import { llmGenerate, parseLlmJson, llmProviderSummary } from "../src/lib/llm.ts";
 
 try {
   process.loadEnvFile(".env.local");
@@ -28,11 +28,11 @@ const project = {
   specific_asks: "Modular kitchen with granite countertop, move the sink to the window wall.",
 };
 
-console.log(`Model: ${geminiModel()}`);
-console.log("Calling Gemini (responseMimeType=application/json)...");
+console.log(`Providers: ${llmProviderSummary()}`);
+console.log("Calling LLM (JSON mode)...");
 const t0 = Date.now();
 
-const raw = await geminiGenerate({
+const raw = await llmGenerate({
   system: PLAN_SYSTEM_PROMPT,
   user: `${buildPlanUserMessage(project)}\n\n${PLAN_JSON_SHAPE}`,
   json: true,
@@ -43,7 +43,7 @@ const raw = await geminiGenerate({
 const secs = ((Date.now() - t0) / 1000).toFixed(1);
 console.log(`Returned in ${secs}s.`);
 
-const plan = parseGeminiJson(raw);
+const plan = parseLlmJson(raw);
 plan.tasks = sanitizeTasks(plan.tasks || []);
 
 const sched = schedule(plan.tasks);
